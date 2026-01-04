@@ -9,8 +9,8 @@
 
 class SerialBLEInterface : public BaseSerialInterface {
   BLEUart bleuart;
-  bool _isEnabled;
-  bool _isDeviceConnected;
+  volatile bool _isEnabled;
+  volatile bool _isDeviceConnected;
   unsigned long _last_write;
 
   struct Frame {

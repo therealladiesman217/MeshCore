@@ -166,9 +166,19 @@ bool SerialBLEInterface::isWriteBusy() const {
 }
 
 size_t SerialBLEInterface::checkRecvFrame(uint8_t dest[]) {
+  // Guard against race condition: if disconnected, clear stale queue and exit early
+  // Fixes crash when BLE disconnect interrupt fires between queue check and bleuart operations
+  if (!_isDeviceConnected) {
+    if (send_queue_len > 0) {
+      send_queue_len = 0;  // Clear stale data to prevent buildup
+    }
+    return 0;
+  }
+
   if (send_queue_len > 0   // first, check send queue
     && millis() >= _last_write + BLE_WRITE_MIN_INTERVAL    // space the writes apart
   ) {
+    if (!_isDeviceConnected) return 0; // Re-check before write to narrow race window
     _last_write = millis();
     bleuart.write(send_queue[0].buf, send_queue[0].len);
     BLE_DEBUG_PRINTLN("writeBytes: sz=%d, hdr=%d", (uint32_t)send_queue[0].len, (uint32_t) send_queue[0].buf[0]);
